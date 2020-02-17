@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>CollapsibleContainer.qml</file>
+        <file>CollapsibleHeader.qml</file>
+        <file>TestValue.qml</file>
+    </qresource>
+</RCC>
