@@ -54,8 +54,8 @@ Window {
                     id: schedColor
                     objectName: "schedColor"
                     scheduleStart: "07:13:50"
-                    scheduleInterval: "00:00:15"
-                    scheduleEnd: "19:14:45"
+                    scheduleInterval: "00:00:05"
+                    scheduleEnd: "16:42:00"
 
                     // we have to start it once the schedule is set
                     Component.onCompleted: {
@@ -103,7 +103,8 @@ Window {
 
                 Text {
                     id: lblSchedTest
-                    text: "Should change color every " + (schedColor.scheduleInterval.split(":")[0]*60*60 + schedColor.scheduleInterval.split(":")[1]*60 + schedColor.scheduleInterval.split(":")[2]) + " sec:"
+//                    text: "Should change color every " + (schedColor.scheduleInterval.split(":")[0]*60*60 + schedColor.scheduleInterval.split(":")[1]*60 + schedColor.scheduleInterval.split(":")[2]) + " sec:"
+                    text: "Should change color every " + (parseInt(schedColor.scheduleInterval.split(":")[0]*60*60) + parseInt(schedColor.scheduleInterval.split(":")[1]*60) + parseInt(schedColor.scheduleInterval.split(":")[2])) + " sec:"
                     anchors.top: rectSchedTest.top
                     anchors.margins: 10
                     color: "black"

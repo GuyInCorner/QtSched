@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QTimer>
 
-
 //
 // A simple realtime scheduler class that allows control of recurring events at specified times.
 // Can be used in C++ or QML.
@@ -21,6 +20,8 @@
 //
 // To use set the schedule then start()
 //
+// Debug messages will reference the schedule by objectName so setting objectName is recommended
+//
 class CQtSched : public QObject {
     Q_OBJECT
 
@@ -36,7 +37,7 @@ class CQtSched : public QObject {
     // Monitor if the schedule is active or not.  This is a read only property.  Use stop() to stop it.
     Q_PROPERTY(bool active READ isActive NOTIFY activeChanged)
 
-    // turn on event logging
+    // when true, detailed event data will appear in the debug log
     Q_PROPERTY(bool verbose READ verbose WRITE setVerbose)
 
 public:
@@ -48,7 +49,7 @@ public:
     //
 
     // Set start of schedule
-    Q_INVOKABLE bool setScheduleStart(int _startHour, int _startMin, int _startSec);
+    Q_INVOKABLE bool setScheduleStart(int _hour, int _minute, int _second);
 
     // Set start of schedule as a string hh:mm:ss
     Q_INVOKABLE bool setScheduleStart(QString _startStr);
@@ -56,7 +57,7 @@ public:
     Q_INVOKABLE QString getScheduleStart() const;
 
     // Set interval of schedule
-    Q_INVOKABLE bool setScheduleInterval(int _intHour, int _intMin, int _intSec);
+    Q_INVOKABLE bool setScheduleInterval(int _hour, int _minute, int _second);
 
     // Set interval of schedule as a string hh:mm:ss
     Q_INVOKABLE bool setScheduleInterval(QString _intervalStr);
@@ -64,7 +65,7 @@ public:
     Q_INVOKABLE QString getScheduleInterval() const;
 
     // Set end of schedule
-    Q_INVOKABLE bool setScheduleEnd(int _endHour, int _endMin, int _endSec);
+    Q_INVOKABLE bool setScheduleEnd(int _hour, int _minute, int _second);
 
     // Set end of schedule as a string hh:mm:ss
     Q_INVOKABLE bool setScheduleEnd(QString _endStr);
@@ -72,7 +73,7 @@ public:
     Q_INVOKABLE QString getScheduleEnd() const;
 
     // returns true if it's running or false if not running.
-    Q_INVOKABLE bool isActive() const;
+    bool isActive() const;
 
     void setVerbose(bool _val);
     bool verbose() const;
@@ -81,11 +82,16 @@ public:
     // Contol methods
     //
 
-    // call start after setting up the schedule
+    // Setup schedule start, interval, (and optionally end) times then call start to begin
     Q_INVOKABLE bool start();
 
-    // call stop to pause it and start to resume again
     Q_INVOKABLE void stop();
+
+private:
+
+    //
+    // helpers
+    //
 
 
 signals:
@@ -104,23 +110,22 @@ private slots:
     void onTimeout();
 
 private:
-    QTimer      *m_updateTimer;
+    QTimer      *m_nextTimer;
+
     bool        m_verbose;
+    bool        m_enabled;
+    bool        m_hasEnd;
 
     int         m_startHour;
     int         m_startMin;
     int         m_startSec;
 
-    int         m_intHour;
-    int         m_intMin;
-    int         m_intSec;
+    int         m_intervalHour;
+    int         m_intervalMin;
+    int         m_intervalSec;
 
-    bool        m_hasEnd;
     int         m_endHour;
     int         m_endMin;
     int         m_endSec;
-
-    bool        m_enabled;      // false if we're between the end time and next start time
 };
-
-#endif // PVHAPP_H
+#endif

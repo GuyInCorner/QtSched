@@ -1,49 +1,49 @@
-import QtQuick 2.0
+import QtQuick 2.12
 
 Rectangle {
-    id: root
+    id: rootTestValue
 
     property alias readOnly: inp.readOnly
-    property alias label: txt.text
+
+    property string label: "Label"
     property alias labelColor: txt.color
-    property alias labelSize: txt.font.pointSize
-    property alias labelWidth: txt.width
+    property real labelWidthFactor: 0.25;
+
     property alias valueColor: inp.color
-    property alias valueSize: inp.font.pointSize
-    property alias valueWidth: inp.width
+    property real valueWidthFactor: 0.75;
     property alias value: inp.text
 
-    signal accepted();
+    signal accepted(string _value);
 
-    height: 32
-    width: 400
+    height: 30
+    width: 380
     border.width: 1
-    border.color: "black"
+    border.color: "darkgray"
 
     Text {
         id:txt
-        text: "Label"
+        text: rootTestValue.label + ":"
         color: "black"
-        width: parent.width/4
+        width: parent.width * rootTestValue.labelWidthFactor;
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        anchors.margins: 5
+        anchors.leftMargin: 5
         font.pointSize: 16
     }
 
     TextInput {
         id: inp
-        width: parent.width/4*3
+        width: parent.width * rootTestValue.valueWidthFactor;
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.margins: 5
+        anchors.rightMargin: 5
         font.pointSize: 16
         selectByMouse: true
 
         cursorVisible: true
 
         onAccepted: {
-            root.accepted();
+            rootTestValue.accepted(rootTestValue.value);
         }
     }
 }

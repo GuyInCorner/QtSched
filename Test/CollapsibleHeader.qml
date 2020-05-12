@@ -1,16 +1,18 @@
-import QtQuick 2.0
+import QtQuick 2.12
 
 Rectangle {
-    id: root
+    id: rootCollapsibleHeader
 
     property var container: null
     property string text: "Header"
+
     property alias textColor: txt.color
     property alias textSize: txt.font.pointSize
 
-    height: 36
-    width: 100
-    color: "gray"
+    height: 40
+    width: 200
+
+    color: "lightgray"
 
     Component.onCompleted: {
         priv.checkState();
@@ -42,15 +44,14 @@ Rectangle {
 
     Text {
         id:txt
-        text: root.text + "  " + priv.stateText
+        text: rootCollapsibleHeader.text + "  " + priv.stateText
         color: "white"
         anchors.centerIn: parent
-        font.pointSize: 20
+        font.pointSize: 18
     }
 
     MouseArea {
-        width: parent.width
-        height: parent.height
+        anchors.fill: parent;
         onClicked: {
             priv.toggleState();
             priv.checkState();

@@ -34,7 +34,7 @@ void CTestContainer::stop() {
 }
 
 void CTestContainer::schedTimeout() {
-    qDebug() << "CTestContainer::schedTimeout()";
+//    qDebug() << "CTestContainer::schedTimeout()";
     if(nullptr != m_engine) {
         m_engine->rootContext()->setContextProperty("GlobalTimeString", QDateTime::currentDateTime().toString());
     }

@@ -1,8 +1,8 @@
-import QtQuick 2.11
+import QtQuick 2.12
 import QtQuick.Layouts 1.3
 
 ColumnLayout {
-    id: root
+    id: rootCollapsibleContainer
 
     spacing: 5
     Layout.fillHeight: true

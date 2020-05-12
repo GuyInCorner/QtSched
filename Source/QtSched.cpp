@@ -1,52 +1,54 @@
 #include "QtSched.h"
 
+#include <QDateTime>
+#include <QTimer>
 #include <QDebug>
 #include <QLoggingCategory>
-#include <QTimer>
-#include <QDateTime>
 
 static QLoggingCategory loggingCategory("CQtSched");
 
 CQtSched::CQtSched(QObject *_parent) : QObject(_parent) {
-    m_updateTimer = new QTimer(this);
-    m_updateTimer->setSingleShot(true);
-    m_updateTimer->setTimerType(Qt::CoarseTimer);
-    QObject::connect(m_updateTimer, SIGNAL(timeout()), this, SLOT(onTimeout()));
     m_verbose = false;
+
+    m_nextTimer = new QTimer(this);
+    m_nextTimer->setTimerType(Qt::CoarseTimer);
+    m_nextTimer->setSingleShot(true);
+    QObject::connect(m_nextTimer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+
+    m_enabled       = true;
+    m_hasEnd        = false;
 
     m_startHour     = 0;
     m_startMin      = 0;
     m_startSec      = 0;
 
-    m_intHour       = 0;
-    m_intMin        = 0;
-    m_intSec        = 0;
-
-    m_hasEnd        = false;
     m_endHour       = 0;
     m_endMin        = 0;
     m_endSec        = 0;
 
-    m_enabled       = true;
+    m_intervalHour       = 0;
+    m_intervalMin        = 0;
+    m_intervalSec        = 0;
 }
 
 CQtSched::~CQtSched() {
-    if(nullptr != m_updateTimer) {
-        if(m_updateTimer->isActive()) {
-            qCDebug(loggingCategory) << "CQtSched::~CQtSched() Stopping active timer: " << objectName();
-            m_updateTimer->stop();
+    if(nullptr != m_nextTimer) {
+        if(m_nextTimer->isActive()) {
+            qCDebug(loggingCategory) << "CQtSched::~CQtSched() Stopping active schedule: " << objectName();
+            m_nextTimer->stop();
         }
-        delete m_updateTimer;
+        delete m_nextTimer;
     }
 }
 
-bool CQtSched::setScheduleStart(int _startHour, int _startMin, int _startSec) {
+bool CQtSched::setScheduleStart(int _hour, int _minute, int _second) {
     bool rc = true;
 
-    if((m_startHour != _startHour) || (m_startMin != _startMin) || (m_startSec != _startSec)) {
-        m_startHour     = _startHour;
-        m_startMin      = _startMin;
-        m_startSec      = _startSec;
+    if((m_startHour != _hour) || (m_startMin != _minute) || (m_startSec != _second)) {
+        m_startHour     = _hour;
+        m_startMin      = _minute;
+        m_startSec      = _second;
+
         if((m_startHour > 23) || (m_startHour < 0)) {
             m_startHour = 0;
         }
@@ -89,7 +91,7 @@ bool CQtSched::setScheduleStart(QString _startStr) {
     if(rc) {
         setScheduleStart(numHour, numMin, numSec);
     } else {
-        qCDebug(loggingCategory) << "CQtSched::setScheduleStart() Incorrect format: " << _startStr;
+        qCDebug(loggingCategory) << "CQtSched::setScheduleStart() schedule: " << objectName() << " Incorrect format: " << _startStr;
     }
 
     return(rc);
@@ -103,21 +105,22 @@ QString CQtSched::getScheduleStart() const {
     return(outStr);
 }
 
-bool CQtSched::setScheduleInterval(int _intHour, int _intMin, int _intSec) {
+bool CQtSched::setScheduleInterval(int _hour, int _minute, int _second) {
     bool rc = true;
 
-    if((m_intHour != _intHour) || (m_intMin != _intMin) || (m_intSec != _intSec)) {
-        m_intHour       = _intHour;
-        m_intMin        = _intMin;
-        m_intSec        = _intSec;
-        if((m_intHour > 24) || (m_intHour < 0)) {
-            m_intHour = 0;
+    if((m_intervalHour != _hour) || (m_intervalMin != _minute) || (m_intervalSec != _second)) {
+        m_intervalHour       = _hour;
+        m_intervalMin        = _minute;
+        m_intervalSec        = _second;
+
+        if((m_intervalHour > 24) || (m_intervalHour < 0)) {
+            m_intervalHour = 0;
         }
-        if((m_intMin > 60) || (m_intMin < 0)) {
-            m_intMin = 0;
+        if((m_intervalMin > 60) || (m_intervalMin < 0)) {
+            m_intervalMin = 0;
         }
-        if((m_intSec > 60) || (m_intSec < 0)) {
-            m_intSec = 0;
+        if((m_intervalSec > 60) || (m_intervalSec < 0)) {
+            m_intervalSec = 0;
         }
 
         emit scheduleIntervalChanged(getScheduleInterval());
@@ -152,7 +155,7 @@ bool CQtSched::setScheduleInterval(QString _intervalStr) {
     if(rc) {
         setScheduleInterval(numHour, numMin, numSec);
     } else {
-        qCDebug(loggingCategory) << "CQtSched::setScheduleInterval() Incorrect format: " << _intervalStr;
+        qCDebug(loggingCategory) << "CQtSched::setScheduleInterval() schedule: " << objectName() << " Incorrect format: " << _intervalStr;
     }
 
     return(rc);
@@ -161,19 +164,20 @@ bool CQtSched::setScheduleInterval(QString _intervalStr) {
 QString CQtSched::getScheduleInterval() const {
     QString outStr;
 
-    outStr = QString("%1:%2:%3").arg(m_intHour, 2, 10, QChar('0')).arg(m_intMin, 2, 10, QChar('0')).arg(m_intSec, 2, 10, QChar('0'));
+    outStr = QString("%1:%2:%3").arg(m_intervalHour, 2, 10, QChar('0')).arg(m_intervalMin, 2, 10, QChar('0')).arg(m_intervalSec, 2, 10, QChar('0'));
 
     return(outStr);
 }
 
-bool CQtSched::setScheduleEnd(int _endHour, int _endMin, int _endSec) {
+bool CQtSched::setScheduleEnd(int _hour, int _minute, int _second) {
     bool rc = true;
 
-    if((m_endHour != _endHour) || (m_endMin != _endMin) || (m_endSec != _endSec)) {
+    if((m_endHour != _hour) || (m_endMin != _minute) || (m_endSec != _second)) {
         m_hasEnd = true;
-        m_endHour     = _endHour;
-        m_endMin      = _endMin;
-        m_endSec      = _endSec;
+        m_endHour     = _hour;
+        m_endMin      = _minute;
+        m_endSec      = _second;
+
         if((m_endHour > 23) || (m_endHour < 0)) {
             m_hasEnd = false;
             m_endHour = 0;
@@ -219,7 +223,7 @@ bool CQtSched::setScheduleEnd(QString _endStr) {
     if(rc) {
         setScheduleEnd(numHour, numMin, numSec);
     } else {
-        qCDebug(loggingCategory) << "CQtSched::setSchedule_endStr() Incorrect format: " << _endStr;
+        qCDebug(loggingCategory) << "CQtSched::setSchedule_endStr() schedule: " << objectName() << " Incorrect format: " << _endStr;
     }
 
     return(rc);
@@ -235,70 +239,61 @@ QString CQtSched::getScheduleEnd() const {
 
 bool CQtSched::start() {
     bool rc = true;
-    int nowTime = 0;
-    int todayTime = 0;
-    int startTime = 0;
-    int intTime = 0;
-    int nextTime = 0;
-    int endTime = 0;
+    int tsStart = 0;
+    int tsInterval = 0;
+    int tsEnd = 0;
+    int tsCurrent = 0;
+    int tsToday = 0;
+    int tsNext = 0;
     bool wasActive = isActive();
 
-    // not already running.  Calculate how long to wait
-    if(false == m_updateTimer->isActive()) {
-        // get now time
-        nowTime = (int)QDateTime::currentDateTime().toTime_t();
-
-        // get time of start of today
+    // If we're not running, calculate the next event timestamp
+    if(false == wasActive) {
+        tsCurrent = (int)QDateTime::currentDateTime().toTime_t();
         QDateTime curDate(QDate::currentDate());
-        todayTime = (int)curDate.toTime_t();
+        tsToday = (int)curDate.toTime_t();
+        tsStart = (m_startHour * 3600) + (m_startMin * 60) + m_startSec;
+        tsInterval = (m_intervalHour * 3600) + (m_intervalMin * 60) + m_intervalSec;
 
-        // get seconds of start time
-        startTime = m_startHour*60*60 + m_startMin*60 + m_startSec;
-
-        // add start time to today time
-        // calculate interval time
-        intTime = m_intHour*60*60 + m_intMin*60 + m_intSec;
-
-        if(intTime > 0) {
-            // next time is start time plus today time
-            nextTime = todayTime + startTime;
-            while(nextTime <= nowTime) {
-                nextTime += intTime;
+        if(tsInterval > 0) {
+            // advance the next timestamp until it's ahead of the current timestamp
+            tsNext = tsToday + tsStart;
+            while(tsNext <= tsCurrent) {
+                tsNext += tsInterval;
             }
 
-            // updateInterval time is next time - now time
-            intTime = nextTime - nowTime;
+            // calculate how long away that is
+            tsInterval = tsNext - tsCurrent;
 
-            // set enabled to true so that we emit the timeout signal
-            m_enabled = true;
-
-            // handle case of schedule only running for part of the day
             if(m_hasEnd) {
-                // get seconds of end time
-                endTime = m_endHour*60*60 + m_endMin*60 + m_endSec;
-                if(startTime > endTime) {
-                    // starts today, ends tomorrow
-                    endTime += 86400;
+                // An end time means the schedule is only running for part of the day
+                tsEnd = (m_endHour * 3600) + (m_endMin * 60) + m_endSec;
+                if(tsEnd < tsStart) {
+                    // special case of schecule starting today but ending tomorrow so add a day
+                    tsEnd += 86400;
                 }
-                if((nextTime >= (startTime+todayTime)) && (nextTime <= (endTime+todayTime))) {
+                if((tsNext <= (tsEnd+tsToday)) && (tsNext >= (tsStart+tsToday))) {
+                    // We're outside of the time range during which the schedule is running (between end and star) so disable the event
                     m_enabled = true;
                 } else {
                     m_enabled = false;
                 }
+            } else {
+                // No end time so enable the firing of the event
+                m_enabled = true;
             }
 
-            // start timer
-            m_updateTimer->setInterval(intTime*1000);
-            m_updateTimer->start();
-            if(m_updateTimer->isActive()) {
-                if(m_verbose) qCDebug(loggingCategory) << objectName() << " timer will timeout in " << QString::number(intTime) << " sec";
+            m_nextTimer->setInterval(tsInterval * 1000);
+            m_nextTimer->start();
+
+            rc = m_nextTimer->isActive();
+            if(rc) {
+                if(m_verbose) qCDebug(loggingCategory) << "schedule: " << objectName() << " timer will timeout in " << QString::number(tsInterval) << " sec";
             } else {
-                qCDebug(loggingCategory) << "Error:  Can't start timer: " << objectName();
-                rc = false;
+                qCDebug(loggingCategory) << "Error:  Failed start schedule: " << objectName();
             }
         } else {
-            qCDebug(loggingCategory) << "Error: Can't start timer: " << objectName() << " Invalid interval";
-            rc = false;
+            qCDebug(loggingCategory) << "Error: Invalid interval. Can't start schedule: " << objectName();
         }
     }
 
@@ -316,11 +311,11 @@ void CQtSched::stop() {
         if(m_verbose) qDebug() << objectName() << ".emit activeChanged(false)";
         emit activeChanged(false);
     }
-    m_updateTimer->stop();
+    m_nextTimer->stop();
 }
 
 bool CQtSched::isActive() const {
-    return(m_updateTimer->isActive());
+    return(m_nextTimer->isActive());
 }
 
 void CQtSched::setVerbose(bool _val) {
@@ -334,9 +329,9 @@ bool CQtSched::verbose() const {
 void CQtSched::onTimeout() {
     if(m_verbose) {
         if(m_enabled) {
-            qCDebug(loggingCategory) << "CQtSched::onTimeout() name: " << objectName();
+            qCDebug(loggingCategory) << "CQtSched::onTimeout() schedule: " << objectName();
         } else {
-            qCDebug(loggingCategory) << "CQtSched::onTimeout() name: " << objectName() << " Disabled:  Outside of start and end";
+            qCDebug(loggingCategory) << "CQtSched::onTimeout() schedule: " << objectName() << " Disabled:  Event is outside of start and end time";
         }
     }
 
