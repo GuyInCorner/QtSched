@@ -1,3 +1,24 @@
+// *********************************************************************************************************************
+//
+//    Copyright © 2022 Keith Scott
+//
+//    Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+//    and associated documentation files (the “Software”), to deal in the Software without restriction,
+//    including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//    and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+//    subject to the following conditions:
+//
+//    The above copyright notice and this permission notice shall be included in all copies or substantial portions
+//    of the Software.
+//
+//    THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+//    TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+//    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+//    CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+//    IN THE SOFTWARE.
+//
+// *********************************************************************************************************************
+
 #include "QtSched.h"
 
 #include <QDateTime>
@@ -250,7 +271,17 @@ bool CQtSched::start() {
     // If we're not running, calculate the next event timestamp
     if(false == wasActive) {
         tsCurrent = (int)QDateTime::currentDateTime().toTime_t();
-        QDateTime curDate(QDate::currentDate());
+
+        //QDateTime curDate(QDate::currentDate());  // works well but being depricated
+        //QDateTime curDate(QDate().startOfDay());  // slow
+
+        // reasonably quick method to replace the depticated one but requires more fiddling
+        QDateTime curDate = QDateTime::currentDateTime();
+        QTime t;
+        t.setHMS(0,0,0);
+        curDate.setTime(t);
+        //qDebug() << "QDateTime curDate(QDate::currentDate()) " << curDate.toString();
+
         tsToday = (int)curDate.toTime_t();
         tsStart = (m_startHour * 3600) + (m_startMin * 60) + m_startSec;
         tsInterval = (m_intervalHour * 3600) + (m_intervalMin * 60) + m_intervalSec;
